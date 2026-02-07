@@ -4,7 +4,7 @@ import type { ChartSchemaDefinition } from './index';
  * Результат разрешения конфигурации
  */
 export interface ResolvedConfig {
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   dependencies: string[];
   errors: ResolutionError[];
 }
@@ -24,7 +24,7 @@ export interface ResolutionError {
  */
 export interface ResolutionContext {
   schemas: Map<string, ChartSchemaDefinition>;
-  variables: Map<string, any>;
+  variables: Map<string, unknown>;
   visited: Set<string>;
   path: string[];
 }

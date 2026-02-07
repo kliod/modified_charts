@@ -162,10 +162,10 @@ describe('Resolver', () => {
 
   it('should resolve interpolations with props', () => {
     const resolver = new Resolver();
-    
+    type Props = { chartType?: string; reportId?: string };
     const schema: ChartSchemaDefinition = {
-      type: ((props: any) => props?.chartType || 'bar') as any,
-      source: ((props: any) => `/api/charts/${props?.reportId}`) as any
+      type: ((props: Props) => props?.chartType || 'bar') as ChartSchemaDefinition['type'],
+      source: ((props: Props) => `/api/charts/${props?.reportId}`) as ChartSchemaDefinition['source']
     };
 
     const result = resolver.resolve(schema, { chartType: 'line', reportId: 'sales-2024' });
@@ -196,7 +196,7 @@ describe('Validator', () => {
   it('should detect invalid chart type', () => {
     const validator = new Validator();
     const schema: ChartSchemaDefinition = {
-      type: 'invalid' as any
+      type: 'invalid' as ChartSchemaDefinition['type']
     };
 
     const errors = validator.validateSchema(schema);

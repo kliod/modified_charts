@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ChartJSAdapter } from '../src/adapter/chartjs';
 import { ConfigNormalizer } from '../src/adapter/normalizer';
-import type { AtomicChartResponse } from '../types/index';
+import type { AtomicChartResponse, DatasetConfig } from '../types/index';
 
 describe('ConfigNormalizer', () => {
   it('should normalize basic chart data', () => {
@@ -61,7 +61,7 @@ describe('ConfigNormalizer', () => {
       { id: 'sales-2024', label: 'Sales 2024', data: [100, 200, 300], backgroundColor: 'rgba(0,0,0,0.5)' },
       { label: 'Revenue', data: [{ x: 10, y: 20 }, { x: 15, y: 25 }], backgroundColor: ['red', 'blue'] }
     ];
-    const descriptors = ConfigNormalizer.getDatasetDescriptors(datasets as any, 'bar');
+    const descriptors = ConfigNormalizer.getDatasetDescriptors(datasets as DatasetConfig[], 'bar');
     expect(descriptors).toHaveLength(2);
     expect(descriptors[0]).toMatchObject({
       index: 0,

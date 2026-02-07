@@ -65,10 +65,10 @@ export class ConfigNormalizer {
    * Нормализовать датасеты
    */
   private static normalizeDatasets(
-    datasets: Array<Record<string, any>>
-  ): Array<Record<string, any>> {
+    datasets: Array<Record<string, unknown>>
+  ): Array<Record<string, unknown>> {
     return datasets.map(dataset => {
-      const normalized: Record<string, any> = {
+      const normalized: Record<string, unknown> = {
         label: dataset.label || 'Dataset',
         data: dataset.data || []
       };

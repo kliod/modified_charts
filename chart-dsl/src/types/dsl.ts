@@ -37,6 +37,15 @@ export interface DSLToken {
 export type PropertyPath = string;
 
 /**
+ * Результат разбора вызова функции в DSL (например rest("url"))
+ */
+export interface FunctionCallValue {
+  type: 'function';
+  name: string;
+  args: (string | number)[];
+}
+
+/**
  * Значение свойства
  */
 export type PropertyValue = 
@@ -44,7 +53,8 @@ export type PropertyValue =
   | number 
   | boolean 
   | Array<string | number>
-  | ((props?: any) => any);
+  | ((props?: unknown) => unknown)
+  | FunctionCallValue;
 
 /**
  * Узел AST для свойства
@@ -98,7 +108,7 @@ export interface AST {
  */
 export interface ParsedDSL {
   ast: AST;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   errors: ParseError[];
 }
 

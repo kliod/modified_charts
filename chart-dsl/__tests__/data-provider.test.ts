@@ -98,7 +98,7 @@ describe('RestDataProvider', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'fetch',
-      vi.fn((url: string) =>
+      vi.fn((_url: string) =>
         Promise.resolve({
           ok: true,
           headers: new Headers({ 'content-type': 'application/json' }),
@@ -109,7 +109,7 @@ describe('RestDataProvider', () => {
   });
 
   it('should fetch data from REST API', async () => {
-    const mockResponse: any = {
+    const mockResponse: { labels: string[]; datasets: { label: string; data: number[] }[] } = {
       labels: ['Jan', 'Feb'],
       datasets: [{ label: 'Sales', data: [100, 200] }]
     };
@@ -156,7 +156,7 @@ describe('RestDataProvider', () => {
   });
 
   it('should cache responses', async () => {
-    const mockResponse: any = {
+    const mockResponse: { labels: string[]; datasets: unknown[] } = {
       labels: ['Jan'],
       datasets: []
     };

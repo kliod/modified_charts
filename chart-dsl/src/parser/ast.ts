@@ -1,4 +1,5 @@
 import type { ASTNode, PropertyNode, CommentNode, InterpolationNode, AST } from '../types/dsl';
+import type { PropertyValue } from '../types/dsl';
 
 /**
  * Утилиты для работы с AST
@@ -9,7 +10,7 @@ export class ASTBuilder {
    */
   static createPropertyNode(
     path: string,
-    value: any,
+    value: PropertyValue,
     line: number,
     column: number
   ): PropertyNode {

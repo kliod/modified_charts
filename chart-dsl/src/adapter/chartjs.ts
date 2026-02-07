@@ -1,6 +1,13 @@
-import type { ChartType, ChartOptions, Plugin } from 'chart.js';
+import type { Chart, ChartType, ChartOptions, Plugin } from 'chart.js';
 import type { NormalizedChartConfig, PluginConfig, ChartEventHandlers } from '../types/chartjs';
+import type { AtomicChartResponse } from '../types/index';
 import { ConfigNormalizer } from './normalizer';
+
+declare global {
+  interface Window {
+    __chart_dsl_registered?: boolean;
+  }
+}
 
 // Функция для регистрации Chart.js (вызывается динамически)
 let registrationPromise: Promise<void> | null = null;
@@ -11,7 +18,7 @@ export async function registerChartJS(): Promise<void> {
   }
 
   registrationPromise = (async () => {
-    if (typeof window !== 'undefined' && (window as any).__chart_dsl_registered) {
+    if (typeof window !== 'undefined' && window.__chart_dsl_registered) {
       return;
     }
 
@@ -38,7 +45,7 @@ export async function registerChartJS(): Promise<void> {
       Filler
     } = chartModule;
 
-    const componentsToRegister: any[] = [
+    const componentsToRegister: (typeof Plugin | unknown)[] = [
       CategoryScale,
       LinearScale,
       RadialLinearScale,
@@ -59,10 +66,10 @@ export async function registerChartJS(): Promise<void> {
       Filler
     ].filter(Boolean); // Убрать undefined компоненты
 
-    Chart.register(...componentsToRegister);
+    Chart.register(...(componentsToRegister.filter(Boolean) as Plugin[]));
 
     if (typeof window !== 'undefined') {
-      (window as any).__chart_dsl_registered = true;
+      window.__chart_dsl_registered = true;
     }
   })();
 
@@ -78,7 +85,7 @@ export class ChartJSAdapter {
    */
   static async createConfig(
     type: ChartType,
-    data: any,
+    data: AtomicChartResponse,
     options?: Partial<ChartOptions>,
     plugins?: PluginConfig,
     events?: ChartEventHandlers
@@ -183,8 +190,8 @@ export class ChartJSAdapter {
    * Обновить график
    */
   static async updateChart(
-    chart: any,
-    newData: any,
+    chart: Chart,
+    newData: AtomicChartResponse,
     options?: Partial<ChartOptions>
   ): Promise<void> {
     await registerChartJS();

@@ -8,7 +8,9 @@ import type {
   PropertyNode,
   CommentNode,
   ParsedDSL,
-  ParseError
+  ParseError,
+  PropertyValue,
+  FunctionCallValue
 } from '../types/dsl';
 
 /**
@@ -22,7 +24,7 @@ export class Parser {
   /**
    * Парсить DSL строку
    */
-  parse(input: string, interpolations: any[] = []): ParsedDSL {
+  parse(input: string, interpolations: unknown[] = []): ParsedDSL {
     const lexer = new Lexer(input);
     this.tokens = lexer.tokenize();
     this.position = 0;
@@ -30,7 +32,7 @@ export class Parser {
 
     const nodes: ASTNode[] = [];
     const metadata: NonNullable<AST['metadata']> = {};
-    const config: Record<string, any> = {};
+    const config: Record<string, unknown> = {};
 
     while (!this.isEOF()) {
       try {
@@ -80,7 +82,7 @@ export class Parser {
   /**
    * Парсить свойство
    */
-  private parseProperty(interpolations: any[]): PropertyNode | null {
+  private parseProperty(interpolations: unknown[]): PropertyNode | null {
     const path = this.parsePropertyPath();
     
     if (!this.expect(TokenType.COLON)) {
@@ -140,7 +142,7 @@ export class Parser {
   /**
    * Парсить значение
    */
-  private parseValue(_interpolations: any[]): any {
+  private parseValue(_interpolations: unknown[]): PropertyValue | null {
     const token = this.currentToken();
 
     // Пропустить комментарии - они не могут быть значениями
@@ -168,16 +170,17 @@ export class Parser {
         this.advance();
         return token.value;
 
-      case TokenType.NUMBER:
+      case TokenType.NUMBER: {
         this.advance();
         const num = parseFloat(token.value);
         return isNaN(num) ? token.value : num;
+      }
 
       case TokenType.BOOLEAN:
         this.advance();
         return token.value === 'true';
 
-      case TokenType.VARIABLE:
+      case TokenType.VARIABLE: {
         // Проверить, является ли это JSONPath выражением ($.xxx)
         // НЕ продвигать позицию пока не проверим следующий токен
         if (this.position + 1 < this.tokens.length && this.tokens[this.position + 1].type === TokenType.DOT) {
@@ -203,6 +206,7 @@ export class Parser {
         }
         this.advance(); // Пропустить VARIABLE
         return token.value; // Вернем как есть, resolver заменит
+      }
 
       case TokenType.INTERPOLATION:
         this.advance();
@@ -222,14 +226,14 @@ export class Parser {
   /**
    * Парсить вызов функции (например, rest("..."))
    */
-  private parseFunctionCall(funcName: string): any {
+  private parseFunctionCall(funcName: string): FunctionCallValue {
     // Пропустить открывающую скобку
     if (!this.expect(TokenType.LPAREN)) {
       throw new Error(`Expected '(' after function name "${funcName}"`);
     }
 
     // Прочитать аргументы (пока поддерживаем только один строковый аргумент)
-    const args: any[] = [];
+    const args: (string | number)[] = [];
     
     while (!this.isEOF() && this.currentToken().type !== TokenType.RPAREN) {
       if (this.currentToken().type === TokenType.STRING) {
@@ -276,7 +280,7 @@ export class Parser {
    * Извлечь метаданные из конфига
    */
   private extractMetadata(
-    config: Record<string, any>,
+    config: Record<string, unknown>,
     metadata: NonNullable<AST['metadata']>
   ): void {
     if (config.source) {
@@ -294,19 +298,19 @@ export class Parser {
    * Установить значение в конфиг по пути
    */
   private setConfigValue(
-    config: Record<string, any>,
+    config: Record<string, unknown>,
     path: string,
-    value: any
+    value: unknown
   ): void {
     const parts = path.split('.');
-    let current = config;
+    let current: Record<string, unknown> = config;
 
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
       if (!(part in current)) {
         current[part] = {};
       }
-      current = current[part];
+      current = current[part] as Record<string, unknown>;
     }
 
     current[parts[parts.length - 1]] = value;

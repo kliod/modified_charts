@@ -29,7 +29,7 @@ export function ChartRenderer({
 
   // Нормализовать опции для Chart.js
   const normalizeOptions = (options: Partial<ChartOptions>, type: ChartType): Partial<ChartOptions> => {
-    const normalized: any = { ...options };
+    const normalized: Partial<ChartOptions> = { ...options };
     
     // Проверить scales для radar chart
     if (type === 'radar' && normalized.scales) {
@@ -47,14 +47,14 @@ export function ChartRenderer({
     }
     
     // Проверить все опции на наличие неправильных типов
-    const checkValue = (value: any, path: string = ''): any => {
+    const checkValue = (value: unknown, path: string = ''): unknown => {
       if (value === null || value === undefined) {
         return value;
       }
       
       // Если это объект, рекурсивно проверить его свойства
       if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-        const checked: any = {};
+        const checked: Record<string, unknown> = {};
         for (const [key, val] of Object.entries(value)) {
           checked[key] = checkValue(val, `${path}.${key}`);
         }
@@ -65,7 +65,7 @@ export function ChartRenderer({
       return value;
     };
     
-    return checkValue(normalized);
+    return checkValue(normalized) as Partial<ChartOptions>;
   };
 
   // Динамический импорт Chart.js (только один раз)
@@ -97,8 +97,8 @@ export function ChartRenderer({
           Filler
         } = module;
         
-        if (typeof window !== 'undefined' && !(window as any).__chart_dsl_registered) {
-          const componentsToRegister: any[] = [
+        if (typeof window !== 'undefined' && !(window as Window & { __chart_dsl_registered?: boolean }).__chart_dsl_registered) {
+          const componentsToRegister: unknown[] = [
             CategoryScale,
             LinearScale,
             RadialLinearScale,
@@ -117,10 +117,9 @@ export function ChartRenderer({
             Tooltip,
             Legend,
             Filler
-          ].filter(Boolean); // Убрать undefined компоненты
-          
-          Chart.register(...componentsToRegister);
-          (window as any).__chart_dsl_registered = true;
+          ].filter(Boolean);
+          Chart.register(...(componentsToRegister as Parameters<typeof Chart.register>));
+          (window as Window & { __chart_dsl_registered?: boolean }).__chart_dsl_registered = true;
         }
         
         setChartModule(module);
@@ -184,7 +183,7 @@ export function ChartRenderer({
         chart.data.labels = safeConfig.data.labels;
         const newSets = safeConfig.data.datasets;
         for (let i = 0; i < chart.data.datasets.length && i < newSets.length; i++) {
-          const chartDs = chart.data.datasets[i] as any;
+          const chartDs = chart.data.datasets[i] as Record<string, unknown> & { data: unknown[] };
           const newDs = newSets[i];
           const newData = Array.isArray(newDs.data) ? newDs.data : [];
           const oldData = chartDs.data;
@@ -209,46 +208,49 @@ export function ChartRenderer({
         chartRef.current.data = d
           ? {
               labels: [...(d.labels || [])],
-              datasets: (d.datasets || []).map((ds: any) => ({
+              datasets: (d.datasets || []).map((ds: Record<string, unknown>) => ({
                 ...ds,
-                data: Array.isArray(ds.data) ? (ds.data as any[]).map((v: any) => (typeof v === 'number' ? v : { ...v })) : ds.data
+                data: Array.isArray(ds.data) ? (ds.data as unknown[]).map((v: unknown) => (typeof v === 'number' ? v : v != null && typeof v === 'object' ? { ...v } : v)) : ds.data
               }))
             }
           : d;
       }
       if (safeConfig.options) {
         // Глубокое слияние опций для правильного обновления вложенных объектов
-        const deepMergeOptions = (target: any, source: any): any => {
+        const deepMergeOptions = (target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> => {
           const result = { ...target };
           for (const key in source) {
-            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && !(source[key] instanceof Date)) {
-              result[key] = deepMergeOptions(target[key] || {}, source[key]);
+            const srcVal = source[key];
+            const tgtVal = target[key];
+            if (srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal) && !(srcVal instanceof Date)) {
+              result[key] = deepMergeOptions((tgtVal && typeof tgtVal === 'object' && !Array.isArray(tgtVal) ? tgtVal : {}) as Record<string, unknown>, srcVal as Record<string, unknown>);
             } else {
-              result[key] = source[key];
+              result[key] = srcVal;
             }
           }
           return result;
         };
-        // Функция для очистки внутренних свойств Chart.js из объекта опций
-        const cleanInternalProps = (obj: any): any => {
+        const cleanInternalProps = (obj: unknown): Record<string, unknown> | unknown => {
           if (!obj || typeof obj !== 'object' || Array.isArray(obj) || obj instanceof Date) {
             return obj;
           }
-          const cleaned: any = {};
-          for (const key in obj) {
+          const cleaned: Record<string, unknown> = {};
+          const o = obj as Record<string, unknown>;
+          for (const key in o) {
             if (key === 'resolver' || key.startsWith('$')) {
               continue;
             }
-            if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key]) && !(obj[key] instanceof Date)) {
-              cleaned[key] = cleanInternalProps(obj[key]);
+            const val = o[key];
+            if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
+              cleaned[key] = cleanInternalProps(val) as Record<string, unknown>;
             } else {
-              cleaned[key] = obj[key];
+              cleaned[key] = val;
             }
           }
           return cleaned;
         };
-        const mergedOptions = deepMergeOptions(chartRef.current.options || {}, safeConfig.options);
-        const cleanedOptions = cleanInternalProps(mergedOptions);
+        const mergedOptions = deepMergeOptions((chartRef.current.options || {}) as Record<string, unknown>, (safeConfig.options || {}) as Record<string, unknown>);
+        const cleanedOptions = cleanInternalProps(mergedOptions) as Record<string, unknown>;
         if (typeof safeConfig.options?.maintainAspectRatio === 'boolean') {
           cleanedOptions.maintainAspectRatio = safeConfig.options.maintainAspectRatio;
         }

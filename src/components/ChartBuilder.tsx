@@ -127,6 +127,7 @@ export function ChartBuilder({ onBack, theme: themeFromApp, onThemeChange }: Cha
 
   useEffect(() => {
     if (isThemeControlled && themeFromApp !== undefined && state.theme !== themeFromApp) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync controlled theme prop to local state
       setState(prev => ({ ...prev, theme: themeFromApp }));
     }
   }, [isThemeControlled, themeFromApp]);

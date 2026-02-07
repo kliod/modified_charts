@@ -7,7 +7,7 @@ import type { ChartSchemaDefinition } from '../types/index';
  */
 export type SchemaTemplateTag = (
   strings: TemplateStringsArray,
-  ...values: any[]
+  ...values: unknown[]
 ) => ChartSchemaDefinition;
 
 /**
@@ -15,7 +15,7 @@ export type SchemaTemplateTag = (
  */
 export function chartSchema(
   strings: TemplateStringsArray,
-  ...values: any[]
+  ...values: unknown[]
 ): ChartSchemaDefinition {
   // Объединить строки и значения
   const dsl = strings.reduce((acc, str, i) => {
@@ -44,7 +44,7 @@ export function chartSchema(
  * Создать именованную схему (для регистрации в реестре)
  */
 export function namedChartSchema(name: string): SchemaTemplateTag {
-  return (strings: TemplateStringsArray, ...values: any[]) => {
+  return (strings: TemplateStringsArray, ...values: unknown[]) => {
     const schema = chartSchema(strings, ...values);
     SchemaRegistry.register(name, schema);
     return schema;

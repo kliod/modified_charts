@@ -10,7 +10,7 @@ import type {
  */
 export class Resolver {
   private schemas: Map<string, ChartSchemaDefinition> = new Map();
-  private variables: Map<string, any> = new Map();
+  private variables: Map<string, unknown> = new Map();
 
   /**
    * Зарегистрировать схему
@@ -22,7 +22,7 @@ export class Resolver {
   /**
    * Установить переменные
    */
-  setVariables(variables: Record<string, any>): void {
+  setVariables(variables: Record<string, unknown>): void {
     Object.entries(variables).forEach(([key, value]) => {
       this.variables.set(key, value);
     });
@@ -31,7 +31,7 @@ export class Resolver {
   /**
    * Разрешить конфигурацию
    */
-  resolve(schema: ChartSchemaDefinition, props?: any): ResolvedConfig {
+  resolve(schema: ChartSchemaDefinition, props?: unknown): ResolvedConfig {
     const context: ResolutionContext = {
       schemas: this.schemas,
       variables: this.variables,
@@ -68,11 +68,11 @@ export class Resolver {
   private resolveSchema(
     schema: ChartSchemaDefinition,
     context: ResolutionContext,
-    props: any,
+    props: unknown,
     dependencies: string[],
     errors: ResolutionError[]
-  ): Record<string, any> {
-    let config: Record<string, any> = {};
+  ): Record<string, unknown> {
+    let config: Record<string, unknown> = {};
 
     // Разрешить наследование
     if (schema.extends) {
@@ -126,9 +126,9 @@ export class Resolver {
    */
   private processSchema(
     schema: ChartSchemaDefinition,
-    props: any
-  ): Record<string, any> {
-    const config: Record<string, any> = {};
+    props: unknown
+  ): Record<string, unknown> {
+    const config: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(schema)) {
       if (key === 'extends' || key === 'map') {
@@ -154,8 +154,8 @@ export class Resolver {
       // Обработать функции (интерполяции)
       if (typeof value === 'function') {
         try {
-          config[key] = value(props);
-        } catch (error) {
+          config[key] = (value as (p?: unknown) => unknown)(props);
+        } catch {
           config[key] = value;
         }
       } else {
@@ -170,19 +170,19 @@ export class Resolver {
    * Разрешить переменные в конфиге
    */
   private resolveVariables(
-    config: Record<string, any>,
+    config: Record<string, unknown>,
     context: ResolutionContext,
     errors: ResolutionError[],
     skipJsonPath: boolean = false
-  ): Record<string, any> {
-    const resolved: Record<string, any> = {};
+  ): Record<string, unknown> {
+    const resolved: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(config)) {
       // Специальная обработка для map - все его значения являются JSONPath выражениями
       if (key === 'map') {
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
           // Рекурсивно обработать map, но не пытаться разрешать JSONPath как переменные
-          resolved[key] = this.resolveVariables(value, context, errors, true);
+          resolved[key] = this.resolveVariables(value as Record<string, unknown>, context, errors, true);
         } else {
           resolved[key] = value;
         }
@@ -214,7 +214,7 @@ export class Resolver {
           resolved[key] = value; // Оставить как есть
         }
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        resolved[key] = this.resolveVariables(value, context, errors);
+        resolved[key] = this.resolveVariables(value as Record<string, unknown>, context, errors);
       } else {
         resolved[key] = value;
       }
@@ -226,19 +226,20 @@ export class Resolver {
   /**
    * Deep merge двух объектов
    */
-  private deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
+  private deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = { ...target };
 
     for (const [key, value] of Object.entries(source)) {
+      const existing = result[key];
       if (
         typeof value === 'object' &&
         value !== null &&
         !Array.isArray(value) &&
-        typeof result[key] === 'object' &&
-        result[key] !== null &&
-        !Array.isArray(result[key])
+        typeof existing === 'object' &&
+        existing !== null &&
+        !Array.isArray(existing)
       ) {
-        result[key] = this.deepMerge(result[key], value);
+        result[key] = this.deepMerge(existing as Record<string, unknown>, value as Record<string, unknown>);
       } else {
         result[key] = value;
       }

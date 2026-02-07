@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import {
   listSavedConfigs,
@@ -197,14 +197,10 @@ interface SavedConfigsModalProps {
 }
 
 export function SavedConfigsModal({ onClose, onLoad }: SavedConfigsModalProps) {
-  const [configs, setConfigs] = useState<Array<{ name: string; savedAt: string }>>([]);
+  const [configs, setConfigs] = useState<Array<{ name: string; savedAt: string }>>(listSavedConfigs);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingName, setEditingName] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
-
-  useEffect(() => {
-    setConfigs(listSavedConfigs());
-  }, []);
 
   const handleLoad = useCallback((name: string) => {
     onLoad(name);

@@ -8,7 +8,7 @@ import type { AtomicChartResponse, DataSourceConfig, GraphQLSourceConfig } from 
 export class GraphQLDataProvider {
   async fetch(
     source: DataSourceConfig,
-    params?: Record<string, any>,
+    params?: Record<string, unknown>,
     mapping?: Record<string, string>
   ): Promise<AtomicChartResponse> {
     if (!source || (source as GraphQLSourceConfig).type !== 'graphql') {
@@ -42,37 +42,38 @@ export class GraphQLDataProvider {
     if (contentType && !contentType.includes('application/json')) {
       throw new Error(`Expected JSON response but got ${contentType}`);
     }
-    let data: any;
+    let data: unknown;
     try {
       data = await response.json();
     } catch (e) {
       throw new Error(`Failed to parse JSON: ${e instanceof Error ? e.message : 'Unknown'}`);
     }
-    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
-      const msg = data.errors.map((e: any) => e.message || String(e)).join('; ');
+    const dataObj = data as Record<string, unknown> & { errors?: Array<{ message?: string }>; labels?: string[]; datasets?: unknown[]; options?: unknown; meta?: unknown };
+    if (dataObj.errors && Array.isArray(dataObj.errors) && dataObj.errors.length > 0) {
+      const msg = dataObj.errors.map((e: { message?: string }) => e.message || String(e)).join('; ');
       throw new Error(`GraphQL errors: ${msg}`);
     }
     let result: AtomicChartResponse;
     if (mapping && Object.keys(mapping).length > 0) {
-      const mapped = JSONPathMapper.map(data, mapping);
+      const mapped = JSONPathMapper.map(dataObj, mapping);
       result = {
-        labels: mapped.labels ?? data.labels ?? [],
-        datasets: mapped.datasets ?? data.datasets ?? [],
-        options: mapped.options ?? data.options,
-        meta: mapped.meta ?? data.meta
+        labels: (mapped.labels ?? dataObj.labels ?? []) as string[],
+        datasets: (mapped.datasets ?? dataObj.datasets ?? []) as AtomicChartResponse['datasets'],
+        options: mapped.options ?? dataObj.options,
+        meta: mapped.meta ?? dataObj.meta
       };
     } else {
       result = {
-        labels: data.labels ?? [],
-        datasets: data.datasets ?? [],
-        options: data.options,
-        meta: data.meta
+        labels: (dataObj.labels ?? []) as string[],
+        datasets: (dataObj.datasets ?? []) as AtomicChartResponse['datasets'],
+        options: dataObj.options,
+        meta: dataObj.meta
       };
     }
     return result;
   }
 
-  private applyParamsToUrl(url: string, params?: Record<string, any>): string {
+  private applyParamsToUrl(url: string, params?: Record<string, unknown>): string {
     if (!params) return url;
     let out = url;
     Object.entries(params).forEach(([key, value]) => {

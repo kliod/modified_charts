@@ -6,7 +6,7 @@ import type { ChartTheme, BuiltInTheme } from '../types/theme';
 interface ChartProviderContextValue {
   theme: BuiltInTheme | ChartTheme;
   setTheme: (theme: BuiltInTheme | ChartTheme) => void;
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
   config: {
     cacheStrategy?: 'lru' | 'fifo';
     maxCacheSize?: number;
@@ -92,6 +92,7 @@ export function ChartProvider({
 /**
  * Хук для доступа к контексту ChartProvider
  */
+// eslint-disable-next-line react-refresh/only-export-components -- hook is the main export alongside provider
 export function useChartProvider(): ChartProviderContextValue {
   const context = useContext(ChartProviderContext);
   if (!context) {

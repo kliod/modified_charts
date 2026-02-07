@@ -20,20 +20,20 @@ export interface NormalizedChartConfig extends ChartConfiguration {
  * Конфигурация плагинов
  */
 export interface PluginConfig {
-  tooltip?: boolean | Record<string, any>;
-  legend?: boolean | Record<string, any>;
-  title?: boolean | Record<string, any>;
-  [key: string]: any;
+  tooltip?: boolean | Record<string, unknown>;
+  legend?: boolean | Record<string, unknown>;
+  title?: boolean | Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 /**
  * Обработчики событий
  */
 export interface ChartEventHandlers {
-  onClick?: (event: MouseEvent, elements: any[]) => void;
-  onHover?: (event: MouseEvent, elements: any[]) => void;
-  onZoom?: (event: any) => void;
-  onPan?: (event: any) => void;
+  onClick?: (event: MouseEvent, elements: unknown[]) => void;
+  onHover?: (event: MouseEvent, elements: unknown[]) => void;
+  onZoom?: (event: unknown) => void;
+  onPan?: (event: unknown) => void;
 }
 
 /**
