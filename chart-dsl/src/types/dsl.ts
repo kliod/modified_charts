@@ -97,7 +97,7 @@ export type ASTNode = PropertyNode | CommentNode | InterpolationNode;
 export interface AST {
   nodes: ASTNode[];
   metadata?: {
-    source?: string;
+    source?: string | FunctionCallValue;
     extends?: string;
     map?: Record<string, string>;
   };

@@ -282,8 +282,12 @@ export class Parser {
     config: Record<string, unknown>,
     metadata: NonNullable<AST['metadata']>
   ): void {
-    if (config.source != null && typeof config.source === 'string') {
-      metadata.source = config.source;
+    if (config.source != null) {
+      if (typeof config.source === 'string') {
+        metadata.source = config.source;
+      } else if (typeof config.source === 'object' && config.source !== null && (config.source as { type?: string }).type === 'function') {
+        metadata.source = config.source as NonNullable<AST['metadata']>['source'];
+      }
     }
     if (config.extends != null && typeof config.extends === 'string') {
       metadata.extends = config.extends;
