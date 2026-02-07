@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { ChartType, ChartOptions } from 'chart.js';
 import type { ChartTheme } from './theme';
+import type { FunctionCallValue } from './dsl';
 
 /**
  * Атомизированная структура ответа от REST API
@@ -58,7 +59,8 @@ export interface ChartMeta {
  */
 export interface ChartSchemaDefinition {
   type?: ChartType;
-  source?: string | DataSourceConfig;
+  /** URL строка, конфиг источника или вызов функции в DSL (например rest("...")) */
+  source?: string | DataSourceConfig | FunctionCallValue;
   extends?: string;
   map?: Record<string, string>; // JSONPath маппинг
   [key: string]: unknown;
