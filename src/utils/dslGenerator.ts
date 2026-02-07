@@ -131,7 +131,7 @@ export function generateDSL(config: ChartConfigDefinition): string {
 /**
  * Форматирование значения для DSL
  */
-function formatValue(value: any): string {
+function formatValue(value: unknown): string {
   if (typeof value === 'string') {
     // Если строка содержит специальные символы или пробелы, обернуть в кавычки
     if (value.includes(' ') || value.includes('$') || value.includes('.')) {

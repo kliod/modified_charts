@@ -27,12 +27,12 @@ function colorToRgba(hex: string, alpha: number): string {
 
 /** Применить только цвета темы к уже существующим опциям, не перезаписывая scale/plugin целиком (чтобы не сломать callback, display и т.д.) */
 function applyThemeColorsToOptions(
-  options: Record<string, any>,
+  options: Record<string, unknown>,
   variables: Record<string, string>
-): Record<string, any> {
+): Record<string, unknown> {
   const textColor = variables.$text || '#333';
   const gridColor = colorToRgba(textColor, 0.2);
-  const out: Record<string, any> = { ...options, color: options.color ?? textColor };
+  const out: Record<string, unknown> = { ...options, color: (options.color ?? textColor) as string };
   if (out.scales && typeof out.scales === 'object') {
     out.scales = { ...out.scales };
     for (const key of Object.keys(out.scales)) {
@@ -76,7 +76,7 @@ export interface UseChartConfigResult {
  */
 export function useChartConfig(
   chartConfig: ChartConfigDefinition,
-  params?: Record<string, any>
+  params?: Record<string, unknown>
 ): UseChartConfigResult {
   const { variables, config: providerConfig } = useChartProvider();
   const [data, setData] = useState<AtomicChartResponse | null>(null);
@@ -193,8 +193,8 @@ export function useChartConfig(
         const datasetOverrides = builderState.datasetOverrides || {};
         finalChartData = {
           ...finalChartData,
-          datasets: finalChartData.datasets.map((dataset: any, index: number) => {
-            const updated: any = { ...dataset };
+          datasets: finalChartData.datasets.map((dataset: Record<string, unknown>, index: number) => {
+            const updated: Record<string, unknown> = { ...dataset };
             // Поиск override по стабильному ключу: id, label, индекс
             const over =
               (dataset.id != null && datasetOverrides[dataset.id]) ??
@@ -273,7 +273,7 @@ export function useChartConfig(
       const resolvedOptions = resolved.config.options || {};
       const overridesOptions = chartConfig.overrides?.options || {};
       // Глубокое слияние scales: переопределения из конструктора не должны затирать оси из API/схемы
-      const mergeScales = (resolved: Record<string, any> | undefined, overrides: Record<string, any> | undefined): Record<string, any> | undefined => {
+      const mergeScales = (resolved: Record<string, unknown> | undefined, overrides: Record<string, unknown> | undefined): Record<string, unknown> | undefined => {
         if (!overrides || typeof overrides !== 'object') return resolved;
         if (!resolved || typeof resolved !== 'object') return overrides;
         const out = { ...resolved };
@@ -290,7 +290,7 @@ export function useChartConfig(
       };
       const baseMerged = { ...resolvedOptions, ...overridesOptions };
       if (resolvedOptions.scales != null || overridesOptions.scales != null) {
-        baseMerged.scales = mergeScales(resolvedOptions.scales as Record<string, any>, overridesOptions.scales as Record<string, any>) as any;
+        baseMerged.scales = mergeScales(resolvedOptions.scales as Record<string, unknown>, overridesOptions.scales as Record<string, unknown>) as typeof baseMerged.scales;
       }
       let mergedOptions = applyThemeColorsToOptions(
         baseMerged,
@@ -316,7 +316,7 @@ export function useChartConfig(
             scales: {
               ...mergedOptions.scales,
               y: {
-                ...(mergedOptions.scales as Record<string, any>)?.y,
+                ...(mergedOptions.scales as Record<string, unknown>)?.y,
                 min: 0,
                 max: fixedScaleYMaxRef.current
               }
@@ -364,9 +364,9 @@ export function useChartConfig(
       overrides: chartConfig.overrides,
       theme: chartConfig.theme,
       params,
-      _builderState: (chartConfig as any)._builderState
+      _builderState: (chartConfig as Record<string, unknown>)._builderState
     });
-  }, [chartConfig.schema, chartConfig.overrides, chartConfig.theme, params, (chartConfig as any)._builderState]);
+  }, [chartConfig.schema, chartConfig.overrides, chartConfig.theme, params, (chartConfig as Record<string, unknown>)._builderState]);
 
   configKeyRef.current = configKey;
 

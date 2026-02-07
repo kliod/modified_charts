@@ -1,4 +1,4 @@
-import type { ChartSchemaDefinition, AtomicChartResponse } from '../types/index';
+import type { ChartSchemaDefinition } from '../types/index';
 import type { ResolutionError } from '../types/resolver';
 
 /**
@@ -79,25 +79,26 @@ export class Validator {
   /**
    * Валидировать атомизированный ответ
    */
-  validateAtomicResponse(response: any): ResolutionError[] {
+  validateAtomicResponse(response: unknown): ResolutionError[] {
     const errors: ResolutionError[] = [];
 
     // Проверить обязательные поля
-    if (!response.labels || !Array.isArray(response.labels)) {
+    const res = response as { labels?: unknown; datasets?: unknown[] };
+    if (!res.labels || !Array.isArray(res.labels)) {
       errors.push({
         message: 'AtomicChartResponse must have "labels" as an array',
         code: 'INVALID_PROPERTY'
       });
     }
 
-    if (!response.datasets || !Array.isArray(response.datasets)) {
+    if (!res.datasets || !Array.isArray(res.datasets)) {
       errors.push({
         message: 'AtomicChartResponse must have "datasets" as an array',
         code: 'INVALID_PROPERTY'
       });
     } else {
       // Валидировать каждый датасет
-      response.datasets.forEach((dataset: any, index: number) => {
+      res.datasets.forEach((dataset: { label?: unknown; data?: unknown }, index: number) => {
         if (!dataset.label || typeof dataset.label !== 'string') {
           errors.push({
             message: `Dataset[${index}] must have "label" as a string`,
@@ -120,17 +121,18 @@ export class Validator {
   /**
    * Валидировать финальный конфиг для Chart.js
    */
-  validateChartConfig(config: any): ResolutionError[] {
+  validateChartConfig(config: unknown): ResolutionError[] {
     const errors: ResolutionError[] = [];
+    const cfg = config as Record<string, unknown>;
 
-    if (!config.type) {
+    if (!cfg.type) {
       errors.push({
         message: 'Chart config must have "type" property',
         code: 'INVALID_PROPERTY'
       });
     }
 
-    if (!config.data) {
+    if (!cfg.data) {
       errors.push({
         message: 'Chart config must have "data" property',
         code: 'INVALID_PROPERTY'

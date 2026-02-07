@@ -16,23 +16,26 @@ const GRAPHQL_MOCK_URL = '/api/graphql';
 const GRAPHQL_MOCK_QUERY = 'query ChartData { chartData { labels datasets } }';
 
 /** Debounce для color picker — уменьшает нагрузку при перетаскивании ползунка */
-function useDebouncedCallback<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+function useDebouncedCallback<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fnRef = useRef(fn);
-  fnRef.current = fn;
+  useEffect(() => {
+    fnRef.current = fn;
+  }, [fn]);
   useEffect(() => () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
   }, []);
-  return useCallback(
-    ((...args: Parameters<T>) => {
+  const callback = useCallback(
+    (...args: Parameters<T>) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         fnRef.current(...args);
         timeoutRef.current = null;
       }, delay);
-    }) as T,
+    },
     [delay]
   );
+  return callback as T;
 }
 
 /** Стабильный ключ датасета: id ?? label ?? index */
@@ -325,7 +328,7 @@ export function ChartBuilderPanel({ state, onUpdate, theme, datasets = [], resol
     }
   }, [sourceType, graphqlVariables]);
 
-  const handleChange = useCallback((field: keyof BuilderState, value: any) => {
+  const handleChange = useCallback((field: keyof BuilderState, value: unknown) => {
     onUpdate({ [field]: value });
   }, [onUpdate]);
 
@@ -354,7 +357,7 @@ export function ChartBuilderPanel({ state, onUpdate, theme, datasets = [], resol
     setVariablesText('');
   }, [onUpdate]);
 
-  const handleSourceChange = useCallback((field: 'url' | 'method' | 'query' | 'variables' | 'sourceType' | 'refreshIntervalMs', value: string | Record<string, any> | number) => {
+  const handleSourceChange = useCallback((field: 'url' | 'method' | 'query' | 'variables' | 'sourceType' | 'refreshIntervalMs', value: string | Record<string, unknown> | number | undefined) => {
     if (field === 'sourceType') {
       const type = value as 'rest' | 'graphql' | 'websocket';
       const prev = state.source;
@@ -403,9 +406,9 @@ export function ChartBuilderPanel({ state, onUpdate, theme, datasets = [], resol
     if (sourceType === 'graphql') {
       const g = (current && current.type === 'graphql' ? current : { type: 'graphql' as const, url: '', query: '', variables: undefined }) as GraphQLSourceConfig;
       if (field === 'variables') {
-        let parsed: Record<string, any> | undefined;
+        let parsed: Record<string, unknown> | undefined;
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-          parsed = value as Record<string, any>;
+          parsed = value as Record<string, unknown>;
         } else {
           try {
             parsed = typeof value === 'string' && value.trim() ? JSON.parse(value) : undefined;
@@ -493,10 +496,10 @@ export function ChartBuilderPanel({ state, onUpdate, theme, datasets = [], resol
     [selectedStructurePath, handleMapChange]
   );
 
-  const handleOptionChange = useCallback((path: string, value: any) => {
+  const handleOptionChange = useCallback((path: string, value: unknown) => {
     const newOptions = { ...state.options };
     const keys = path.split('.');
-    let current: any = newOptions;
+    let current: Record<string, unknown> = newOptions;
     
     for (let i = 0; i < keys.length - 1; i++) {
       if (!current[keys[i]]) {
@@ -632,13 +635,13 @@ export function ChartBuilderPanel({ state, onUpdate, theme, datasets = [], resol
               onBlur={() => {
                 const raw = variablesText.trim();
                 if (!raw) {
-                  handleSourceChange('variables', undefined as any);
+                  handleSourceChange('variables', undefined);
                   return;
                 }
                 try {
                   handleSourceChange('variables', JSON.parse(raw));
                 } catch {
-                  handleSourceChange('variables', undefined as any);
+                  handleSourceChange('variables', undefined);
                 }
               }}
               placeholder='{ "id": "1" }'

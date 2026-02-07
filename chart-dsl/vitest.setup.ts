@@ -1,8 +1,9 @@
 import '@testing-library/jest-dom';
 
 // Полифилл AbortSignal.any для сред, где его ещё нет (например Node < 20)
-if (typeof AbortSignal !== 'undefined' && !(AbortSignal as any).any) {
-  (AbortSignal as any).any = function (signals: AbortSignal[]): AbortSignal {
+type AbortSignalWithAny = typeof AbortSignal & { any?: (signals: AbortSignal[]) => AbortSignal };
+if (typeof AbortSignal !== 'undefined' && !(AbortSignal as AbortSignalWithAny).any) {
+  (AbortSignal as AbortSignalWithAny).any = function (signals: AbortSignal[]): AbortSignal {
     const controller = new AbortController();
     for (const s of signals) {
       if (s?.aborted) {

@@ -27,7 +27,7 @@ export interface DatasetConfig {
   backgroundColor?: string | string[];
   borderColor?: string | string[];
   borderWidth?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -61,7 +61,7 @@ export interface ChartSchemaDefinition {
   source?: string | DataSourceConfig;
   extends?: string;
   map?: Record<string, string>; // JSONPath маппинг
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -72,8 +72,8 @@ export interface RestSourceConfig {
   url: string;
   method?: 'GET' | 'POST' | 'PUT';
   headers?: Record<string, string>;
-  body?: Record<string, any>;
-  params?: Record<string, any>;
+  body?: Record<string, unknown>;
+  params?: Record<string, unknown>;
 }
 
 /**
@@ -83,7 +83,7 @@ export interface GraphQLSourceConfig {
   type: 'graphql';
   url: string;
   query: string;
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
   headers?: Record<string, string>;
 }
 
@@ -108,7 +108,7 @@ export type DataSourceConfig = RestSourceConfig | GraphQLSourceConfig | WebSocke
 export interface ChartDataAdapter {
   fetch(
     source: DataSourceConfig,
-    params?: Record<string, any>,
+    params?: Record<string, unknown>,
     mapping?: Record<string, string>
   ): Promise<AtomicChartResponse>;
 }
@@ -120,7 +120,7 @@ export interface ChartConfigDefinition {
   schema: ChartSchemaDefinition;
   overrides?: Partial<ChartSchemaDefinition>;
   theme?: ChartTheme | string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -134,10 +134,10 @@ export interface ChartRendererProps {
   overrides?: Partial<AtomicChartResponse>;
   
   // Props для маршрутизации запроса
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   
   // Обработчики событий Chart.js
-  onChartReady?: (chart: any) => void;
+  onChartReady?: (chart: unknown) => void;
   onDataUpdate?: (data: AtomicChartResponse) => void;
   onError?: (error: Error) => void;
   

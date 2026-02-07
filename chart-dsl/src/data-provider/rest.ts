@@ -47,7 +47,7 @@ export class RestDataProvider {
    */
   async fetch(
     source: string | DataSourceConfig,
-    params?: Record<string, any>,
+    params?: Record<string, unknown>,
     mapping?: Record<string, string>
   ): Promise<AtomicChartResponse> {
     const sourceConfig = this.normalizeSource(source, params);
@@ -65,12 +65,7 @@ export class RestDataProvider {
     // useChartConfig игнорирует устаревшие ответы по loadId.
 
     // Выполнить запрос с retry
-    let data: AtomicChartResponse;
-    try {
-      data = await this.fetchWithRetry(sourceConfig, cacheKey);
-    } catch (fetchErr) {
-      throw fetchErr;
-    }
+    const data = await this.fetchWithRetry(sourceConfig, cacheKey);
 
     // Применить маппинг
     let mappedData = data;
@@ -91,7 +86,7 @@ export class RestDataProvider {
    */
   private normalizeSource(
     source: string | DataSourceConfig,
-    params?: Record<string, any>
+    params?: Record<string, unknown>
   ): RestSourceConfig {
     if (typeof source === 'string') {
       let url = source;
@@ -232,7 +227,7 @@ export class RestDataProvider {
         throw new Error(`Expected JSON response but got ${contentType}`);
       }
 
-      let data: any;
+      let data: unknown;
       try {
         data = await response.json();
       } catch (jsonError) {
@@ -248,17 +243,16 @@ export class RestDataProvider {
    * Применить маппинг к данным
    */
   private applyMapping(
-    data: any,
+    data: AtomicChartResponse,
     mapping: Record<string, string>
   ): AtomicChartResponse {
     const mapped = JSONPathMapper.map(data, mapping);
-
     // Построить AtomicChartResponse
     const result: AtomicChartResponse = {
-      labels: mapped.labels || data.labels || [],
-      datasets: mapped.datasets || data.datasets || [],
-      options: mapped.options || data.options,
-      meta: mapped.meta || data.meta
+      labels: (mapped.labels as string[] | undefined) ?? data.labels ?? [],
+      datasets: (mapped.datasets as AtomicChartResponse['datasets'] | undefined) ?? data.datasets ?? [],
+      options: (mapped.options as AtomicChartResponse['options']) ?? data.options,
+      meta: (mapped.meta as AtomicChartResponse['meta']) ?? data.meta
     };
 
     return result;

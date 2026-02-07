@@ -6,14 +6,14 @@ import type { ChartSchemaDefinition, ChartConfigDefinition } from '../types/inde
  */
 export type ConfigTemplateTag = (
   strings: TemplateStringsArray,
-  ...values: any[]
+  ...values: unknown[]
 ) => ChartConfigDefinition;
 
 /**
  * Создать конфигурацию графика на основе схемы
  */
 export function chartConfig(baseSchema: ChartSchemaDefinition): ConfigTemplateTag {
-  return (strings: TemplateStringsArray, ...values: any[]): ChartConfigDefinition => {
+  return (strings: TemplateStringsArray, ...values: unknown[]): ChartConfigDefinition => {
     // Объединить строки и значения
     const dsl = strings.reduce((acc, str, i) => {
       const value = values[i] !== undefined ? values[i] : '';

@@ -89,11 +89,11 @@ function applyColorWithOpacity(color: string, opacity: number): string {
  * Применить параметры визуализации к датасетам
  */
 export function applyVisualStylesToDatasets(
-  datasets: Array<Record<string, any>>,
+  datasets: Array<Record<string, unknown>>,
   state: BuilderState
-): Array<Record<string, any>> {
+): Array<Record<string, unknown>> {
   return datasets.map(dataset => {
-    const updated: Record<string, any> = { ...dataset };
+    const updated: Record<string, unknown> = { ...dataset };
     
     // Применить цвета
     const bgColor = state.backgroundColor || state.color;
@@ -154,7 +154,7 @@ export function buildChartConfig(state: BuilderState): ChartConfigDefinition {
   };
 
   // Построить опции в правильной структуре (responsive всегда true, убран из UI)
-  const options: any = {
+  const options: Record<string, unknown> = {
     ...state.options,
     responsive: true,
     maintainAspectRatio: state.maintainAspectRatio,
@@ -235,7 +235,7 @@ export function listSavedConfigs(): Array<{ name: string; savedAt: string }> {
     if (!saved) return [];
     
     const configs = JSON.parse(saved);
-    return Object.entries(configs).map(([name, data]: [string, any]) => ({
+    return Object.entries(configs).map(([name, data]: [string, { savedAt?: string }]) => ({
       name,
       savedAt: data.savedAt || ''
     }));

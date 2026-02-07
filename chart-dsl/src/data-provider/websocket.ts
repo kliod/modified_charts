@@ -39,7 +39,7 @@ function vary(value: number): number {
 export class WebSocketDataProvider {
   async fetch(
     source: DataSourceConfig,
-    _params?: Record<string, any>,
+    _params?: Record<string, unknown>,
     mapping?: Record<string, string>
   ): Promise<AtomicChartResponse> {
     if (!source || (source as WebSocketSourceConfig).type !== 'websocket') {
