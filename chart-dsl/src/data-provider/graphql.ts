@@ -59,15 +59,15 @@ export class GraphQLDataProvider {
       result = {
         labels: (mapped.labels ?? dataObj.labels ?? []) as string[],
         datasets: (mapped.datasets ?? dataObj.datasets ?? []) as AtomicChartResponse['datasets'],
-        options: mapped.options ?? dataObj.options,
-        meta: mapped.meta ?? dataObj.meta
+        options: (mapped.options ?? dataObj.options) as AtomicChartResponse['options'],
+        meta: (mapped.meta ?? dataObj.meta) as AtomicChartResponse['meta']
       };
     } else {
       result = {
         labels: (dataObj.labels ?? []) as string[],
         datasets: (dataObj.datasets ?? []) as AtomicChartResponse['datasets'],
-        options: dataObj.options,
-        meta: dataObj.meta
+        options: dataObj.options as AtomicChartResponse['options'],
+        meta: dataObj.meta as AtomicChartResponse['meta']
       };
     }
     return result;

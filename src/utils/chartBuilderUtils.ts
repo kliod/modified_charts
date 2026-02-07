@@ -235,9 +235,9 @@ export function listSavedConfigs(): Array<{ name: string; savedAt: string }> {
     if (!saved) return [];
     
     const configs = JSON.parse(saved);
-    return Object.entries(configs).map(([name, data]: [string, { savedAt?: string }]) => ({
+    return Object.entries(configs).map(([name, data]: [string, unknown]) => ({
       name,
-      savedAt: data.savedAt || ''
+      savedAt: (data as { savedAt?: string })?.savedAt || ''
     }));
   } catch (error) {
     console.error('Failed to list configurations:', error);

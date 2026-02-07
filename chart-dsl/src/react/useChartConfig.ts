@@ -5,8 +5,33 @@ import { ChartJSAdapter } from '../adapter/chartjs';
 import { SchemaRegistry } from '../core/registry';
 import { getSegmentColorsForPie } from '../core/segmentPalette';
 import { useChartProvider } from './ChartProvider';
-import type { ChartConfigDefinition, AtomicChartResponse, DataSourceConfig } from '../types/index';
+import type { ChartConfigDefinition, AtomicChartResponse, DataSourceConfig, DatasetConfig } from '../types/index';
 import type { NormalizedChartConfig } from '../types/chartjs';
+
+type DatasetOverride = {
+  backgroundColor?: string | string[];
+  borderColor?: string;
+  borderWidth?: number;
+  opacity?: number;
+  label?: string;
+  borderRadius?: number;
+  pointRadius?: number;
+  pointHoverRadius?: number;
+  tension?: number;
+};
+/** Минимальный тип состояния конструктора для применения стилей к датасетам */
+interface BuilderStateLike {
+  datasetOverrides?: Record<string, DatasetOverride>;
+  backgroundColor?: string;
+  borderColor?: string;
+  color?: string;
+  opacity?: number;
+  borderWidth?: number;
+  borderRadius?: number;
+  pointRadius?: number;
+  pointHoverRadius?: number;
+  tension?: number;
+}
 
 function colorToRgba(hex: string, alpha: number): string {
   const h = hex.replace('#', '');
@@ -25,38 +50,39 @@ function colorToRgba(hex: string, alpha: number): string {
   return hex;
 }
 
-/** Применить только цвета темы к уже существующим опциям, не перезаписывая scale/plugin целиком (чтобы не сломать callback, display и т.д.) */
+/** Применить только цвета темы к уже существующим опциям */
 function applyThemeColorsToOptions(
   options: Record<string, unknown>,
-  variables: Record<string, string>
+  variables: Record<string, unknown>
 ): Record<string, unknown> {
-  const textColor = variables.$text || '#333';
+  const textColor = String(variables.$text ?? '#333');
   const gridColor = colorToRgba(textColor, 0.2);
   const out: Record<string, unknown> = { ...options, color: (options.color ?? textColor) as string };
-  if (out.scales && typeof out.scales === 'object') {
-    out.scales = { ...out.scales };
-    for (const key of Object.keys(out.scales)) {
-      if (key === 'r') continue; // не трогать radial scale — Chart.js требует полную структуру (callback, display)
-      const scale = out.scales[key];
-      if (scale && typeof scale === 'object') {
-        out.scales[key] = {
-          ...scale,
-          grid: scale.grid && typeof scale.grid === 'object' ? { ...scale.grid, color: gridColor } : { color: gridColor },
-          ticks: scale.ticks && typeof scale.ticks === 'object' ? { ...scale.ticks, color: textColor } : { color: textColor },
+  const scalesObj = out.scales as Record<string, unknown> | undefined;
+  if (scalesObj && typeof scalesObj === 'object' && !Array.isArray(scalesObj)) {
+    out.scales = { ...scalesObj };
+    const scales = out.scales as Record<string, unknown>;
+    for (const key of Object.keys(scales)) {
+      if (key === 'r') continue;
+      const scale = scales[key];
+      if (scale && typeof scale === 'object' && !Array.isArray(scale)) {
+        const s = scale as Record<string, unknown>;
+        scales[key] = {
+          ...s,
+          grid: s.grid && typeof s.grid === 'object' ? { ...(s.grid as object), color: gridColor } : { color: gridColor },
+          ticks: s.ticks && typeof s.ticks === 'object' ? { ...(s.ticks as object), color: textColor } : { color: textColor },
         };
       }
     }
   }
-  if (out.plugins && typeof out.plugins === 'object') {
-    out.plugins = { ...out.plugins };
-    if (out.plugins.title) out.plugins.title = { ...out.plugins.title, color: textColor };
-    else out.plugins.title = { color: textColor };
-    if (out.plugins.legend) {
-      out.plugins.legend = {
-        ...out.plugins.legend,
-        labels: out.plugins.legend.labels ? { ...out.plugins.legend.labels, color: textColor } : { color: textColor },
-      };
-    } else out.plugins.legend = { labels: { color: textColor } };
+  const pluginsObj = out.plugins as Record<string, unknown> | undefined;
+  if (pluginsObj && typeof pluginsObj === 'object' && !Array.isArray(pluginsObj)) {
+    out.plugins = { ...pluginsObj };
+    const plugins = out.plugins as Record<string, unknown>;
+    plugins.title = plugins.title && typeof plugins.title === 'object' ? { ...(plugins.title as object), color: textColor } : { color: textColor };
+    plugins.legend = plugins.legend && typeof plugins.legend === 'object'
+      ? { ...(plugins.legend as object), labels: (plugins.legend as Record<string, unknown>).labels && typeof (plugins.legend as Record<string, unknown>).labels === 'object' ? { ...((plugins.legend as Record<string, unknown>).labels as object), color: textColor } : { color: textColor } }
+      : { labels: { color: textColor } };
   }
   return out;
 }
@@ -135,11 +161,11 @@ export function useChartConfig(
       }
 
       let chartData: AtomicChartResponse | null = null;
-      const source = resolved.config.source || chartConfig.schema.source;
+      const source = (resolved.config.source ?? chartConfig.schema?.source) as string | DataSourceConfig | undefined;
 
-      if (source) {
+      if (source && (typeof source === 'string' || (typeof source === 'object' && source !== null && 'url' in source))) {
         const baseURL = (providerConfig as { baseURL?: string }).baseURL ?? '';
-        const normalized = normalizeSource(source, baseURL);
+        const normalized = normalizeSource(source as string | DataSourceConfig, baseURL);
         const fingerprint = JSON.stringify(source);
         if (fingerprint !== lastSourceFingerprintRef.current) {
           lastSourceFingerprintRef.current = fingerprint;
@@ -151,21 +177,18 @@ export function useChartConfig(
           maxCacheSize: providerConfig.maxCacheSize,
           requestTimeout: providerConfig.requestTimeout
         });
-        const mapping = resolved.config.map || chartConfig.schema.map;
+        const mapping = (resolved.config.map ?? chartConfig.schema?.map) as Record<string, string> | undefined;
         chartData = await adapter.fetch(normalized, params, mapping);
       }
 
-      // Построить финальный конфиг
-      const chartType = resolved.config.type || 'bar';
-      
+      const chartType = (resolved.config.type as string) || 'bar';
       if (!ChartJSAdapter.isSupportedType(chartType)) {
         throw new Error(`Unsupported chart type: ${chartType}`);
       }
 
-      // Применить визуальные стили к датасетам, если они указаны в конфиге
-      let finalChartData = chartData || { labels: [], datasets: [] };
-      if (chartConfig._builderState && finalChartData.datasets && finalChartData.datasets.length > 0) {
-        const builderState = chartConfig._builderState;
+      let finalChartData: AtomicChartResponse = chartData || { labels: [], datasets: [] };
+      const builderState = (chartConfig as ChartConfigDefinition & { _builderState?: BuilderStateLike })._builderState;
+      if (builderState && finalChartData.datasets && finalChartData.datasets.length > 0) {
         
         // Функция для применения цвета с прозрачностью
         const applyColorWithOpacity = (color: string, opacity: number): string => {
@@ -193,16 +216,15 @@ export function useChartConfig(
         const datasetOverrides = builderState.datasetOverrides || {};
         finalChartData = {
           ...finalChartData,
-          datasets: finalChartData.datasets.map((dataset: Record<string, unknown>, index: number) => {
+          datasets: finalChartData.datasets.map((dataset: DatasetConfig, index: number) => {
             const updated: Record<string, unknown> = { ...dataset };
-            // Поиск override по стабильному ключу: id, label, индекс
-            const over =
-              (dataset.id != null && datasetOverrides[dataset.id]) ??
-              (dataset.label != null && datasetOverrides[dataset.label]) ??
+            const overRaw =
+              (dataset.id != null ? datasetOverrides[dataset.id] : undefined) ??
+              (dataset.label != null ? datasetOverrides[dataset.label] : undefined) ??
               datasetOverrides[String(index)] ??
               datasetOverrides[index as unknown as string];
+            const over: DatasetOverride | undefined = overRaw && typeof overRaw === 'object' ? overRaw : undefined;
 
-            // Сначала применить общие настройки
             const bgColor = builderState.backgroundColor || builderState.color;
             const borderColor = builderState.borderColor || builderState.color;
             const opacity = over?.opacity !== undefined ? over.opacity : builderState.opacity;
@@ -229,12 +251,13 @@ export function useChartConfig(
                 updated.backgroundColor = updated.backgroundColor.slice(0, dataLen);
               } else {
                 // Первый сегмент — из «Внешний вид» (цвет фона/основной), остальные — палитра
-                const firstColor = (builderState.backgroundColor || builderState.color) && over?.backgroundColor === undefined
-                  ? (builderState.opacity !== undefined && builderState.opacity < 1
-                      ? applyColorWithOpacity(builderState.backgroundColor || builderState.color, builderState.opacity)
-                      : (builderState.backgroundColor || builderState.color))
+                const baseColor = builderState.backgroundColor || builderState.color;
+                const firstColor = baseColor && over?.backgroundColor === undefined
+                  ? (builderState.opacity !== undefined && builderState.opacity < 1 && baseColor
+                      ? applyColorWithOpacity(baseColor, builderState.opacity)
+                      : baseColor)
                   : undefined;
-                updated.backgroundColor = getSegmentColorsForPie(dataLen, firstColor);
+                updated.backgroundColor = getSegmentColorsForPie(dataLen, firstColor ?? undefined);
               }
             }
             
@@ -264,14 +287,13 @@ export function useChartConfig(
             if (over?.label !== undefined) {
               updated.label = over.label;
             }
-            
-            return updated;
+            return updated as DatasetConfig;
           })
         };
       }
 
-      const resolvedOptions = resolved.config.options || {};
-      const overridesOptions = chartConfig.overrides?.options || {};
+      const resolvedOptions = (resolved.config.options || {}) as Record<string, unknown>;
+      const overridesOptions = (chartConfig.overrides?.options || {}) as Record<string, unknown>;
       // Глубокое слияние scales: переопределения из конструктора не должны затирать оси из API/схемы
       const mergeScales = (resolved: Record<string, unknown> | undefined, overrides: Record<string, unknown> | undefined): Record<string, unknown> | undefined => {
         if (!overrides || typeof overrides !== 'object') return resolved;
@@ -293,7 +315,7 @@ export function useChartConfig(
         baseMerged.scales = mergeScales(resolvedOptions.scales as Record<string, unknown>, overridesOptions.scales as Record<string, unknown>) as typeof baseMerged.scales;
       }
       let mergedOptions = applyThemeColorsToOptions(
-        baseMerged,
+        baseMerged as Record<string, unknown>,
         variables
       );
       // Pie/Doughnut не используют Cartesian-шкалы — убираем, иначе рисуется ось Y и ломается layout
@@ -311,12 +333,13 @@ export function useChartConfig(
           const suggestedMax = Math.ceil(Math.max(dataMax * 1.2, 10));
           if (fixedScaleYMaxRef.current == null) fixedScaleYMaxRef.current = suggestedMax;
           else fixedScaleYMaxRef.current = Math.max(fixedScaleYMaxRef.current, suggestedMax);
+          const scalesBase = (mergedOptions.scales && typeof mergedOptions.scales === 'object') ? mergedOptions.scales as Record<string, unknown> : {};
           mergedOptions = {
             ...mergedOptions,
             scales: {
-              ...mergedOptions.scales,
+              ...scalesBase,
               y: {
-                ...(mergedOptions.scales as Record<string, unknown>)?.y,
+                ...(scalesBase.y && typeof scalesBase.y === 'object' ? (scalesBase.y as object) : {}),
                 min: 0,
                 max: fixedScaleYMaxRef.current
               }
@@ -325,11 +348,12 @@ export function useChartConfig(
         }
       }
 
+      const plugins = (resolved.config.plugins ?? chartConfig.overrides?.plugins) as import('../types/chartjs').PluginConfig | undefined;
       const normalizedConfig = await ChartJSAdapter.createConfig(
-        chartType,
+        chartType as import('chart.js').ChartType,
         finalChartData,
         mergedOptions,
-        resolved.config.plugins || chartConfig.overrides?.plugins
+        plugins
       );
 
       if (loadId !== loadIdRef.current) {
@@ -354,19 +378,20 @@ export function useChartConfig(
         setLoading(false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- omit providerConfig to avoid unnecessary refetch
   }, [chartConfig, params, variables]);
 
   // Загрузить при монтировании и изменении конфига или параметров
-  // Используем JSON.stringify для глубокого сравнения, так как объекты могут иметь те же ссылки, но разное содержимое
+  const builderState = (chartConfig as Record<string, unknown>)._builderState;
   const configKey = useMemo(() => {
     return JSON.stringify({
       schema: chartConfig.schema,
       overrides: chartConfig.overrides,
       theme: chartConfig.theme,
       params,
-      _builderState: (chartConfig as Record<string, unknown>)._builderState
+      _builderState: builderState
     });
-  }, [chartConfig.schema, chartConfig.overrides, chartConfig.theme, params, (chartConfig as Record<string, unknown>)._builderState]);
+  }, [chartConfig.schema, chartConfig.overrides, chartConfig.theme, params, builderState]);
 
   configKeyRef.current = configKey;
 

@@ -210,9 +210,8 @@ export class Parser {
 
       case TokenType.INTERPOLATION:
         this.advance();
-        // Попытаться выполнить интерполяцию
         try {
-          const func = new Function('props', `return ${token.value}`);
+          const func = new Function('props', `return ${token.value}`) as (props?: unknown) => unknown;
           return func;
         } catch {
           return token.value;
@@ -283,14 +282,14 @@ export class Parser {
     config: Record<string, unknown>,
     metadata: NonNullable<AST['metadata']>
   ): void {
-    if (config.source) {
+    if (config.source != null && typeof config.source === 'string') {
       metadata.source = config.source;
     }
-    if (config.extends) {
+    if (config.extends != null && typeof config.extends === 'string') {
       metadata.extends = config.extends;
     }
-    if (config.map) {
-      metadata.map = config.map;
+    if (config.map != null && typeof config.map === 'object' && config.map !== null && !Array.isArray(config.map)) {
+      metadata.map = config.map as Record<string, string>;
     }
   }
 

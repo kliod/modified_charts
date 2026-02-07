@@ -136,14 +136,13 @@ export class Resolver {
         continue;
       }
 
-      // Обработать source с вызовом функции (например, rest("..."))
       if (key === 'source') {
-        if (typeof value === 'object' && value !== null && value.type === 'function') {
-          // Преобразовать вызов функции в строку или объект конфигурации
-          if (value.name === 'rest' && value.args && value.args.length > 0) {
-            config[key] = value.args[0]; // Первый аргумент - URL
+        const src = value as { type?: string; name?: string; args?: unknown[] };
+        if (typeof value === 'object' && value !== null && src.type === 'function') {
+          if (src.name === 'rest' && src.args && src.args.length > 0) {
+            config[key] = src.args[0];
           } else {
-            config[key] = value; // Оставить как есть для других функций
+            config[key] = value;
           }
         } else {
           config[key] = value;

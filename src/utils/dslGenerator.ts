@@ -66,11 +66,13 @@ export function generateDSL(config: ChartConfigDefinition): string {
     lines.push(`  theme: ${config.theme};`);
   }
   
-  // Опции из переопределений
   if (config.overrides?.options) {
-    const options = config.overrides.options;
-    
-    // Responsive и maintainAspectRatio
+    const options = config.overrides.options as Record<string, unknown> & {
+      responsive?: unknown;
+      maintainAspectRatio?: unknown;
+      plugins?: Record<string, unknown>;
+      scales?: Record<string, unknown>;
+    };
     if (options.responsive !== undefined) {
       lines.push(`  options.responsive: ${formatValue(options.responsive)};`);
     }
@@ -78,22 +80,24 @@ export function generateDSL(config: ChartConfigDefinition): string {
       lines.push(`  options.maintainAspectRatio: ${formatValue(options.maintainAspectRatio)};`);
     }
     
-    // Plugins
-    if (options.plugins) {
-      if (options.plugins.title) {
-        if (options.plugins.title.display !== undefined) {
-          lines.push(`  options.plugins.title.display: ${formatValue(options.plugins.title.display)};`);
+    const plugins = options.plugins as Record<string, Record<string, unknown>> | undefined;
+    if (plugins) {
+      const title = plugins.title;
+      if (title) {
+        if (title.display !== undefined) {
+          lines.push(`  options.plugins.title.display: ${formatValue(title.display)};`);
         }
-        if (options.plugins.title.text) {
-          lines.push(`  options.plugins.title.text: ${formatValue(options.plugins.title.text)};`);
+        if (title.text) {
+          lines.push(`  options.plugins.title.text: ${formatValue(title.text)};`);
         }
       }
-      if (options.plugins.legend) {
-        if (options.plugins.legend.display !== undefined) {
-          lines.push(`  options.plugins.legend.display: ${formatValue(options.plugins.legend.display)};`);
+      const legend = plugins.legend;
+      if (legend) {
+        if (legend.display !== undefined) {
+          lines.push(`  options.plugins.legend.display: ${formatValue(legend.display)};`);
         }
-        if (options.plugins.legend.position) {
-          lines.push(`  options.plugins.legend.position: ${formatValue(options.plugins.legend.position)};`);
+        if (legend.position) {
+          lines.push(`  options.plugins.legend.position: ${formatValue(legend.position)};`);
         }
       }
     }

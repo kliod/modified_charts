@@ -60,10 +60,10 @@ export class WebSocketDataProvider {
     if (mapping && Object.keys(mapping).length > 0) {
       const mapped = JSONPathMapper.map(wrapped, mapping);
       return {
-        labels: mapped.labels ?? raw.labels,
-        datasets: mapped.datasets ?? raw.datasets,
-        options: mapped.options,
-        meta: mapped.meta ?? raw.meta
+        labels: (mapped.labels as string[] | undefined) ?? raw.labels,
+        datasets: (mapped.datasets as AtomicChartResponse['datasets'] | undefined) ?? raw.datasets,
+        options: mapped.options as AtomicChartResponse['options'],
+        meta: (mapped.meta as AtomicChartResponse['meta']) ?? raw.meta
       };
     }
     return raw;

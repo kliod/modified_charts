@@ -98,15 +98,16 @@ export class Validator {
       });
     } else {
       // Валидировать каждый датасет
-      res.datasets.forEach((dataset: { label?: unknown; data?: unknown }, index: number) => {
-        if (!dataset.label || typeof dataset.label !== 'string') {
+      res.datasets.forEach((dataset: unknown, index: number) => {
+        const d = dataset as { label?: unknown; data?: unknown };
+        if (!d.label || typeof d.label !== 'string') {
           errors.push({
             message: `Dataset[${index}] must have "label" as a string`,
             code: 'INVALID_PROPERTY'
           });
         }
 
-        if (!dataset.data || !Array.isArray(dataset.data)) {
+        if (!d.data || !Array.isArray(d.data)) {
           errors.push({
             message: `Dataset[${index}] must have "data" as an array`,
             code: 'INVALID_PROPERTY'

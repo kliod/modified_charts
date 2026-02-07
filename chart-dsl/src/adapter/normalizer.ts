@@ -25,7 +25,7 @@ export class ConfigNormalizer {
     // Построить ChartData (нормализованные датасеты совместимы с Chart.js по структуре)
     const chartData: ChartData = {
       labels: finalData.labels || [],
-      datasets: this.normalizeDatasets(finalData.datasets || []) as ChartDatasetLike[]
+      datasets: this.normalizeDatasets(finalData.datasets || []) as unknown as ChartDatasetLike[]
     };
 
     // Построить ChartOptions
@@ -128,7 +128,7 @@ export class ConfigNormalizer {
       ...currentConfig,
       data: {
         labels: newData.labels || currentConfig.data.labels,
-        datasets: this.normalizeDatasets(newData.datasets || []) as ChartDatasetLike[]
+        datasets: this.normalizeDatasets(newData.datasets || []) as unknown as ChartDatasetLike[]
       }
     };
   }

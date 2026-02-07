@@ -15,7 +15,7 @@ import {
   saveToLocalStorage
 } from '../utils/chartBuilderUtils';
 import { generateDSL, exportToJSON } from '../utils/dslGenerator';
-import type { ChartConfigDefinition, AtomicChartResponse } from '../../chart-dsl/src/types/index';
+import type { ChartConfigDefinition, AtomicChartResponse, DataSourceConfig } from '../../chart-dsl/src/types/index';
 import { ConfigNormalizer } from '../../chart-dsl/src/adapter/normalizer';
 import styled from 'styled-components';
 import { themeColors, type ThemeName } from '../constants/themeColors';
@@ -127,9 +127,9 @@ export function ChartBuilder({ onBack, theme: themeFromApp, onThemeChange }: Cha
 
   useEffect(() => {
     if (isThemeControlled && themeFromApp !== undefined && state.theme !== themeFromApp) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync controlled theme prop to local state
       setState(prev => ({ ...prev, theme: themeFromApp }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when prop changes, not when state.theme changes
   }, [isThemeControlled, themeFromApp]);
 
   const chartConfig = useMemo(() => {
@@ -207,33 +207,31 @@ export function ChartBuilder({ onBack, theme: themeFromApp, onThemeChange }: Cha
   const handleLoad = useCallback((name: string) => {
     const loaded = loadFromLocalStorage(name);
     if (loaded) {
-      // Восстановить состояние из конфигурации
-      const options = loaded.overrides?.options || {};
-      const plugins = options.plugins || {};
-      
+      const overridesOpts = (loaded.overrides?.options || {}) as Record<string, unknown>;
+      const plugins = (overridesOpts.plugins || {}) as Record<string, unknown>;
       const loadedBuilder = (loaded as ChartConfigDefinition & { _builderState?: BuilderState })._builderState;
       const loadedTheme = (loaded.theme as 'light' | 'dark') || undefined;
       setState(prev => ({
         ...prev,
         type: loaded.schema.type || prev.type,
-        source: typeof loaded.schema.source === 'object' 
-          ? loaded.schema.source 
-          : loaded.schema.source 
-            ? { url: loaded.schema.source as string, method: 'GET' as const }
+        source: typeof loaded.schema.source === 'object'
+          ? loaded.schema.source as DataSourceConfig
+          : loaded.schema.source
+            ? { type: 'rest' as const, url: loaded.schema.source as string, method: 'GET' as const }
             : null,
-        map: loaded.schema.map || prev.map,
+        map: (loaded.schema.map || prev.map) as Record<string, string>,
         theme: loadedTheme ?? prev.theme,
-        color: loaded.overrides?.color || prev.color,
-        title: plugins.title?.text || prev.title,
-        titleDisplay: plugins.title?.display ?? prev.titleDisplay,
-        legendDisplay: plugins.legend?.display ?? prev.legendDisplay,
-        legendPosition: plugins.legend?.position || prev.legendPosition,
-        responsive: options.responsive ?? prev.responsive,
-        maintainAspectRatio: options.maintainAspectRatio ?? prev.maintainAspectRatio,
+        color: (loaded.overrides?.color as string) || prev.color,
+        title: (plugins.title as { text?: string })?.text || prev.title,
+        titleDisplay: (plugins.title as { display?: boolean })?.display ?? prev.titleDisplay,
+        legendDisplay: (plugins.legend as { display?: boolean })?.display ?? prev.legendDisplay,
+        legendPosition: ((plugins.legend as { position?: string })?.position as BuilderState['legendPosition']) || prev.legendPosition,
+        responsive: (overridesOpts.responsive as boolean) ?? prev.responsive,
+        maintainAspectRatio: (overridesOpts.maintainAspectRatio as boolean) ?? prev.maintainAspectRatio,
         datasetOverrides: loadedBuilder?.datasetOverrides ?? prev.datasetOverrides,
         options: {
           ...prev.options,
-          scales: options.scales || prev.options.scales
+          scales: overridesOpts.scales || prev.options?.scales
         }
       }));
       setShowSavedModal(false);

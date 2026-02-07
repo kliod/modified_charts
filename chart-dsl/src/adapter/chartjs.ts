@@ -196,8 +196,10 @@ export class ChartJSAdapter {
   ): Promise<void> {
     await registerChartJS();
     
+    const chartType = (chart.config as { type?: ChartType }).type;
+    if (!chartType) throw new Error('Chart config has no type');
     const normalized = ConfigNormalizer.normalize(
-      chart.config.type,
+      chartType,
       newData,
       options
     );

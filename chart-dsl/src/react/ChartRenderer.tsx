@@ -33,12 +33,10 @@ export function ChartRenderer({
     
     // Проверить scales для radar chart
     if (type === 'radar' && normalized.scales) {
-      // Убедиться, что scale имеет правильный тип
       if (normalized.scales.r) {
-        const rScale = normalized.scales.r;
-        // Проверить, что все свойства имеют правильные типы
+        const rScale = normalized.scales.r as Record<string, unknown>;
         if (typeof rScale.beginAtZero !== 'undefined' && typeof rScale.beginAtZero !== 'boolean') {
-          normalized.scales.r = {
+          (normalized.scales as Record<string, unknown>).r = {
             ...rScale,
             beginAtZero: Boolean(rScale.beginAtZero)
           };
@@ -191,7 +189,7 @@ export function ChartRenderer({
             for (let j = 0; j < oldData.length; j++) {
               const v = newData[j];
               if (typeof v === 'number') oldData[j] = v;
-              else if (v != null && typeof v === 'object') oldData[j] = Array.isArray(oldData[j]) || typeof oldData[j] !== 'object' ? v : { ...oldData[j], ...v };
+              else if (v != null && typeof v === 'object') oldData[j] = Array.isArray(oldData[j]) || typeof oldData[j] !== 'object' ? v : { ...(typeof oldData[j] === 'object' && oldData[j] !== null ? (oldData[j] as object) : {}), ...(v as object) };
             }
           } else {
             chartDs.data = newData.map((v) =>
@@ -205,15 +203,20 @@ export function ChartRenderer({
       } else {
         // Клонируем данные, чтобы Chart.js всегда видел новый объект и перерисовывал (при cache hit иначе ссылка та же и графика может не обновиться)
         const d = safeConfig.data;
-        chartRef.current.data = d
-          ? {
-              labels: [...(d.labels || [])],
-              datasets: (d.datasets || []).map((ds: Record<string, unknown>) => ({
-                ...ds,
-                data: Array.isArray(ds.data) ? (ds.data as unknown[]).map((v: unknown) => (typeof v === 'number' ? v : v != null && typeof v === 'object' ? { ...v } : v)) : ds.data
-              }))
-            }
-          : d;
+        if (d) {
+          chartRef.current.data = {
+            labels: [...(d.labels || [])],
+            datasets: (d.datasets || []).map((ds) => {
+              const spreadDs = ds as Record<string, unknown>;
+              return {
+                ...spreadDs,
+                data: Array.isArray(spreadDs.data) ? (spreadDs.data as unknown[]).map((v: unknown) => (typeof v === 'number' ? v : v != null && typeof v === 'object' ? { ...(v as object) } : v)) : spreadDs.data
+              };
+            })
+          } as typeof chartRef.current.data;
+        } else {
+          chartRef.current.data = d;
+        }
       }
       if (safeConfig.options) {
         // Глубокое слияние опций для правильного обновления вложенных объектов
@@ -258,15 +261,16 @@ export function ChartRenderer({
           cleanedOptions.responsive = safeConfig.options.responsive;
         }
         if (safeConfig.options?.scales && typeof safeConfig.options.scales === 'object') {
-          cleanedOptions.scales = cleanedOptions.scales || {};
+          const scales = (cleanedOptions.scales || {}) as Record<string, unknown>;
           for (const key of Object.keys(safeConfig.options.scales)) {
             const src = safeConfig.options.scales[key];
             if (src && typeof src === 'object') {
-              cleanedOptions.scales[key] = { ...(cleanedOptions.scales[key] || {}), ...src };
+              scales[key] = { ...((scales[key] as Record<string, unknown>) || {}), ...src };
             }
           }
+          cleanedOptions.scales = scales;
         }
-        chartRef.current.options = cleanedOptions;
+        chartRef.current.options = cleanedOptions as typeof chartRef.current.options;
       }
       // WebSocket/поток: анимация движения баров; иначе — мгновенное обновление
       chartRef.current.update(isStreaming ? undefined : 'none');

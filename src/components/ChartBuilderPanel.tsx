@@ -16,7 +16,7 @@ const GRAPHQL_MOCK_URL = '/api/graphql';
 const GRAPHQL_MOCK_QUERY = 'query ChartData { chartData { labels datasets } }';
 
 /** Debounce для color picker — уменьшает нагрузку при перетаскивании ползунка */
-function useDebouncedCallback<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
+function useDebouncedCallback<T extends readonly unknown[]>(fn: (...args: T) => void, delay: number): (...args: T) => void {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fnRef = useRef(fn);
   useEffect(() => {
@@ -25,8 +25,8 @@ function useDebouncedCallback<T extends (...args: unknown[]) => void>(fn: T, del
   useEffect(() => () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
   }, []);
-  const callback = useCallback(
-    (...args: Parameters<T>) => {
+  return useCallback(
+    (...args: T) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         fnRef.current(...args);
@@ -35,7 +35,6 @@ function useDebouncedCallback<T extends (...args: unknown[]) => void>(fn: T, del
     },
     [delay]
   );
-  return callback as T;
 }
 
 /** Стабильный ключ датасета: id ?? label ?? index */
@@ -497,7 +496,7 @@ export function ChartBuilderPanel({ state, onUpdate, theme, datasets = [], resol
   );
 
   const handleOptionChange = useCallback((path: string, value: unknown) => {
-    const newOptions = { ...state.options };
+    const newOptions = { ...state.options } as Record<string, unknown>;
     const keys = path.split('.');
     let current: Record<string, unknown> = newOptions;
     
@@ -505,7 +504,7 @@ export function ChartBuilderPanel({ state, onUpdate, theme, datasets = [], resol
       if (!current[keys[i]]) {
         current[keys[i]] = {};
       }
-      current = current[keys[i]];
+      current = current[keys[i]] as Record<string, unknown>;
     }
     
     current[keys[keys.length - 1]] = value;
